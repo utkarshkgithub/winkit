@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SignupView, LoginView, MeView
+from .views import SignupView, LoginView, MeView, ChangePasswordView
 
 app_name = 'authentication'
 
@@ -7,4 +7,5 @@ urlpatterns = [
     path('signup', SignupView.as_view(), name='signup'),
     path('login', LoginView.as_view(), name='login'),
     path('me', MeView.as_view(), name='me'),
+    path('change-password', ChangePasswordView.as_view(), name='change_password'),
 ]
