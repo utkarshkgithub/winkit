@@ -4,12 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from .models import Order, OrderItem
+from .models import Order, OrderItem, OrderStatusHistory
 from cart.models import Cart
 from .serializers import (
     OrderSerializer,
     CreateOrderSerializer,
-    UpdateOrderStatusSerializer
+    UpdateOrderStatusSerializer,
+    OrderStatusHistorySerializer
 )
 
 
@@ -125,8 +126,31 @@ class UpdateOrderStatusView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # Set changed_by to track who made the change in history
+        order._changed_by = request.user
         order.order_status = serializer.validated_data['order_status']
         order.save()
 
         order_serializer = OrderSerializer(order)
         return Response(order_serializer.data, status=status.HTTP_200_OK)
+
+
+class TimelineView(APIView):
+    """Get order status history timeline"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+        
+        # Users can only view their own order history, admins can view all
+        if not request.user.is_staff and order.user != request.user:
+            return Response(
+                {'error': 'Permission denied'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get history ordered chronologically (oldest first for customer-facing timeline)
+        history = order.history.all().order_by('changed_at')
+        serializer = OrderStatusHistorySerializer(history, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

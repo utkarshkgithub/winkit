@@ -64,3 +64,41 @@ class OrderItem(models.Model):
         db_table = 'order_items'
         verbose_name = 'Order Item'
         verbose_name_plural = 'Order Items'
+
+
+class OrderStatusHistory(models.Model):
+    """Order Status History model to track all status changes"""
+    
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='history'
+    )
+    old_status = models.CharField(
+        max_length=20,
+        choices=Order.STATUS_CHOICES,
+        null=True,
+        blank=True
+    )
+    new_status = models.CharField(
+        max_length=20,
+        choices=Order.STATUS_CHOICES
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_history_changes'
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"Order #{self.order.id}: {self.old_status} → {self.new_status}"
+
+    class Meta:
+        db_table = 'order_status_history'
+        verbose_name = 'Order Status History'
+        verbose_name_plural = 'Order Status Histories'
+        ordering = ['changed_at']
